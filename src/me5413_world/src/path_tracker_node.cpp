@@ -41,7 +41,8 @@ void dynamicParamCallback(me5413_world::path_trackerConfig& config, uint32_t lev
   PARAMS_UPDATED = true;
 };
 
-PathTrackerNode::PathTrackerNode() : tf2_listener_(tf2_buffer_)
+PathTrackerNode::PathTrackerNode() : tf2_listener_(tf2_buffer_),
+_controller(control::LinearController::PID, control::AngularController::PURE_PURSUIT)
 {
   f = boost::bind(&dynamicParamCallback, _1, _2);
   server.setCallback(f);
@@ -89,20 +90,21 @@ geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odom
   geometry_msgs::Twist cmd_vel;
   if (PARAMS_UPDATED)
   {
-    _pid.updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
+    control::PIDController* pidController;
+    if(_controller._angularControllerType == control::AngularController::PID
+    ){
+      pidController = dynamic_cast<control::PIDController*>(_controller.getAngularController());
+      pidController->updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
+    }else if(_controller._linearControllerType == control::LinearController::PID){
+      pidController = dynamic_cast<control::PIDController*>(_controller.getLinearController());
+      pidController->updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
+    }
     PARAMS_UPDATED = false;
   }
   
-  cmd_vel.linear.x = _pid.getLinearVel(odom_robot, pose_goal);
-  cmd_vel.angular.z = _pid.getPIDSteering(odom_robot, pose_goal);
-  // cmd_vel.linear.x = 0.3;
-  
-  // const auto u = _dwa.getControl(odom_robot, pose_goal);
-  // cmd_vel.linear.x = u[0];
-  // cmd_vel.angular.z = u[1];
-
-  // cmd_vel.angular.z = _pp.getPurePursuitSteering(odom_robot, pose_goal);
-  // cmd_vel.angular.z = _pp.getStanleySteering(odom_robot, pose_goal);
+  const auto [linX, angZ] = _controller.getLinXAngZ(odom_robot, pose_goal);
+  cmd_vel.linear.x = linX;
+  cmd_vel.angular.z = angZ;
   cmd_vel.angular.z = std::min(std::max(cmd_vel.angular.z, -2.2), 2.2);
   
   std::cout << "cmd vel lin x " << cmd_vel.linear.x << " cmd vel ang z " << cmd_vel.angular.z << "\n";

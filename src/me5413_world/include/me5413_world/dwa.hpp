@@ -2,10 +2,11 @@
 #include <iostream>
 #include <array>
 #include <vector>
+#include "base_controller.hpp"
 
 namespace control{
 
-    class DWAController{
+    class DWAController : public BaseController{
     public:
         DWAController() = default;
 
@@ -23,6 +24,14 @@ namespace control{
             double angle2goal_cost_gain = 0.15;
             double dist2goal_cost_gain = 1.0;
         };
+
+        double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+            return 0.0;
+        }
+
+        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+            return 0.0;
+        }
 
         std::array<double,2> getControl(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
             tf2::Quaternion q_robot;

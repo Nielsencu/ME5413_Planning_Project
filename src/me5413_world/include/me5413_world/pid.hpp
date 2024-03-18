@@ -14,6 +14,7 @@
 #include <nav_msgs/Path.h>
 #include <nav_msgs/Odometry.h>
 #include "utils.hpp"
+#include "base_controller.hpp"
 
 namespace control
 {
@@ -83,7 +84,7 @@ double PID::calculate(double error)
   return output;
 };
 
-class PIDController{
+class PIDController : public BaseController{
   public:
     struct Params{
       double Kp = 0.5;
@@ -103,6 +104,14 @@ class PIDController{
       _params = std::move(paramsIn);
       _pid.updateSettings(_params.Kp, _params.Ki, _params.Kd);
       _pidYaw.updateSettings(_params.Kp_yaw, _params.Ki_yaw, _params.Kd_yaw);
+    }
+
+    double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+      return getLinearVel(odom_robot, pose_goal);
+    }
+
+    double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+      return getPIDSteering(odom_robot, pose_goal);
     }
 
     double getLinearVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){

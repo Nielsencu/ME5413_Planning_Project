@@ -35,11 +35,8 @@
 #include <dynamic_reconfigure/server.h>
 #include <me5413_world/path_trackerConfig.h>
 
-#include "me5413_world/pid.hpp"
-#include "me5413_world/dwa.hpp"
-#include "me5413_world/pure_pursuit.hpp"
 #include "me5413_world/utils.hpp"
-
+#include "me5413_world/robot_controller.hpp"
 namespace me5413_world 
 {
 
@@ -79,9 +76,7 @@ class PathTrackerNode
   geometry_msgs::Pose pose_world_goal_;
 
   // Controllers
-  control::PIDController _pid;
-  control::DWAController _dwa;
-  control::PurePursuitController _pp;
+  control::RobotController _controller;
 };
 
 } // namespace me5413_world

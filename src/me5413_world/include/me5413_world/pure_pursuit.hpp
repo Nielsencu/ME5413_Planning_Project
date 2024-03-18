@@ -3,17 +3,35 @@
 #include <tf2/LinearMath/Transform.h>
 #include <nav_msgs/Path.h>
 #include "utils.hpp"
+#include "base_controller.hpp"
 
 namespace control{
 
-    class PurePursuitController{
+    class PurePursuitController : public BaseController{
     public:
         struct PurePursuitParams{
             double lookahead_dist = 1.0;
             double vehicle_length = 0.5;
             double kp = 1.0;
             double stanley_k = 0.5;
+            bool use_stanley = false;
         };
+
+        PurePursuitController(bool use_stanley){
+            if(use_stanley){
+                _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return getStanleySteering(odom_robot, pose_goal);};
+            }else{
+                _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return getPurePursuitSteering(odom_robot, pose_goal);};
+            }
+        }
+
+        double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+            return 0.0;
+        }
+
+        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+            return _angZFn(odom_robot, pose_goal);
+        }
 
         double getPurePursuitSteering(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
             const auto heading_error = getHeadingError(odom_robot, pose_goal);
@@ -65,5 +83,6 @@ namespace control{
         
     private:
         PurePursuitParams _params;
+        std::function<double (const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal)> _angZFn;
     };
 }
