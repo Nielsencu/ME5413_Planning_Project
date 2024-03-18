@@ -36,6 +36,9 @@
 #include <me5413_world/path_trackerConfig.h>
 
 #include "me5413_world/pid.hpp"
+#include "me5413_world/dwa.hpp"
+#include "me5413_world/pure_pursuit.hpp"
+#include "me5413_world/utils.hpp"
 
 namespace me5413_world 
 {
@@ -76,8 +79,9 @@ class PathTrackerNode
   geometry_msgs::Pose pose_world_goal_;
 
   // Controllers
-  control::PID pid_;
-  control::PID pidYaw_;
+  control::PIDController _pid;
+  control::DWAController _dwa;
+  control::PurePursuitController _pp;
 };
 
 } // namespace me5413_world

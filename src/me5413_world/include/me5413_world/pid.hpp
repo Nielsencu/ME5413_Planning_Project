@@ -11,6 +11,9 @@
 
 #include <iostream>
 #include <cmath>
+#include <nav_msgs/Path.h>
+#include <nav_msgs/Odometry.h>
+#include "utils.hpp"
 
 namespace control
 {
@@ -80,4 +83,44 @@ double PID::calculate(double error)
   return output;
 };
 
+class PIDController{
+  public:
+    struct Params{
+      double Kp = 0.5;
+      double Ki = 0.2;
+      double Kd = 0.2;
+      double Kp_yaw = 1.5;
+      double Ki_yaw = 0.2; 
+      double Kd_yaw = 0.0;
+      double linear_speed_target = 0.5;
+    };
+
+    PIDController() : 
+    _pid(0.1, 1.0, -1.0, _params.Kp, _params.Ki, _params.Kd),
+    _pidYaw(0.1, 2.2, -2.2, _params.Kp_yaw, _params.Ki_yaw, _params.Kd_yaw){};
+
+    void updateParams(Params&& paramsIn){
+      _params = std::move(paramsIn);
+      _pid.updateSettings(_params.Kp, _params.Ki, _params.Kd);
+      _pidYaw.updateSettings(_params.Kp_yaw, _params.Ki_yaw, _params.Kd_yaw);
+    }
+
+    double getLinearVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+      const auto velocity = getVelFromOdom(odom_robot);
+      const auto lin_error = _params.linear_speed_target - velocity;
+      return _pid.calculate(lin_error);;
+    }
+
+    double getPIDSteering(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+      const auto heading_error = getHeadingError(odom_robot, pose_goal);
+      if(std::isnan(heading_error)){
+          return 0.0;
+      }
+      return _pidYaw.calculate(heading_error);
+    }
+  private:
+    Params _params;
+    PID _pid;
+    PID _pidYaw;
+};
 } // namespace control
