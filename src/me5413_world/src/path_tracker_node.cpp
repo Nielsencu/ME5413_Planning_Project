@@ -90,13 +90,9 @@ geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odom
   geometry_msgs::Twist cmd_vel;
   if (PARAMS_UPDATED)
   {
-    control::PIDController* pidController;
-    if(_controller._angularControllerType == control::AngularController::PID
-    ){
-      pidController = dynamic_cast<control::PIDController*>(_controller.getAngularController());
-      pidController->updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
-    }else if(_controller._linearControllerType == control::LinearController::PID){
-      pidController = dynamic_cast<control::PIDController*>(_controller.getLinearController());
+    if(_controller._angularControllerType == control::AngularController::PID ||
+      _controller._linearControllerType == control::LinearController::PID){
+      const auto pidController = _controller.getPIDController();
       pidController->updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
     }
     PARAMS_UPDATED = false;

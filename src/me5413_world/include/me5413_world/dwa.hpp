@@ -5,11 +5,9 @@
 #include "base_controller.hpp"
 
 namespace control{
-
     class DWAController : public BaseController{
     public:
         DWAController() = default;
-
         struct DWAParams{
             double dt = 0.1;
             double pred_time = 0.5; 
@@ -21,7 +19,7 @@ namespace control{
             double lin_vel_res = 0.02;
             double ang_vel_res = 0.04;
             double speed_cost_gain = 0.5; 
-            double angle2goal_cost_gain = 0.15;
+            double angle2goal_cost_gain = 0.0;
             double dist2goal_cost_gain = 1.0;
         };
 
@@ -60,6 +58,7 @@ namespace control{
 
     private:
         DWAParams _params;
+
         void _getDynamicWindow(const std::array<double,5>& x, std::array<double,4>& dw){
             std::array<double,4> v_s{_params.min_lin_vel, _params.max_lin_vel, -_params.max_ang_vel, _params.max_ang_vel};
             std::array<double,4> v_d{x[3] - _params.max_lin_acc * _params.dt, 

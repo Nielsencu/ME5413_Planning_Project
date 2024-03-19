@@ -105,22 +105,14 @@ class PIDController : public BaseController{
       _pid.updateSettings(_params.Kp, _params.Ki, _params.Kd);
       _pidYaw.updateSettings(_params.Kp_yaw, _params.Ki_yaw, _params.Kd_yaw);
     }
-
+    
     double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-      return getLinearVel(odom_robot, pose_goal);
-    }
-
-    double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-      return getPIDSteering(odom_robot, pose_goal);
-    }
-
-    double getLinearVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
       const auto velocity = getVelFromOdom(odom_robot);
       const auto lin_error = _params.linear_speed_target - velocity;
       return _pid.calculate(lin_error);;
     }
 
-    double getPIDSteering(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+    double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
       const auto heading_error = getHeadingError(odom_robot, pose_goal);
       if(std::isnan(heading_error)){
           return 0.0;

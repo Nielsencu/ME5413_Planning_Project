@@ -17,12 +17,18 @@ namespace control{
         RobotController(LinearController linControllerIn, AngularController angControllerIn);
         LinearController _linearControllerType;
         AngularController _angularControllerType;
-        BaseController* getLinearController(){return _linearController;};
-        BaseController* getAngularController(){return _angularController;};
+        std::shared_ptr<PIDController> getPIDController(){return _pidController;};
+        std::shared_ptr<StanleyController> getStanleyController(){return _stanleyController;};
         std::array<double,2> getLinXAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal);
     private:
-        BaseController* _linearController;
-        BaseController* _angularController;
+        // BaseController* _linearController;
+        // BaseController* _angularController;
+
+        std::shared_ptr<PurePursuitController> _purePursuitController;
+        std::shared_ptr<PIDController> _pidController;
+        std::shared_ptr<DWAController> _dwaController;
+        std::shared_ptr<StanleyController> _stanleyController;
+
         std::function<double (const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal)> _velXFn;
         std::function<double (const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal)> _angZFn;
     };
@@ -31,27 +37,28 @@ namespace control{
         _linearControllerType = linControllerIn;
         _angularControllerType = angControllerIn;
         if(linControllerIn == LinearController::DWA){
-            _linearController = dynamic_cast<BaseController*>(new DWAController());
+            _dwaController = std::make_shared<DWAController>();
+            return;
         }else{
-            _linearController = dynamic_cast<BaseController*>(new PIDController());
-            _velXFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _linearController->getLinX(odom_robot, pose_goal);};
+            _pidController = std::make_shared<PIDController>();
+            _velXFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _pidController->getLinX(odom_robot, pose_goal);};
         }
         if(angControllerIn == AngularController::PURE_PURSUIT){
-            _angularController = dynamic_cast<BaseController*>(new PurePursuitController(false));
-            _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _angularController->getAngZ(odom_robot, pose_goal);};
+            _purePursuitController = std::make_shared<PurePursuitController>();
+            _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _purePursuitController->getAngZ(odom_robot, pose_goal);};
         }else if(angControllerIn == AngularController::STANLEY){
-            _angularController = dynamic_cast<BaseController*>(new PurePursuitController(true));
-            _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _angularController->getAngZ(odom_robot, pose_goal);};
+            _stanleyController = std::make_shared<StanleyController>();
+            _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _stanleyController->getAngZ(odom_robot, pose_goal);};
         }else{
-            _angularController = dynamic_cast<BaseController*>(new PIDController());
-            _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _angularController->getAngZ(odom_robot, pose_goal);};
+            _pidController = std::make_shared<PIDController>();
+            _angZFn = [this](const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){return _pidController->getAngZ(odom_robot, pose_goal);};
         }
     };
     
     std::array<double,2> RobotController::getLinXAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-        // if(_linearControllerType == LinearController::DWA){
-        //     return _linearController->getControl(odom_robot, pose_goal);
-        // }
+        if(_linearControllerType == LinearController::DWA && _dwaController){
+            return _dwaController->getControl(odom_robot, pose_goal);
+        }
         return std::array<double, 2>{_velXFn(odom_robot, pose_goal), _angZFn(odom_robot, pose_goal)};
     }
 }
