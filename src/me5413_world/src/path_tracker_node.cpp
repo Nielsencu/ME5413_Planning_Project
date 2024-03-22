@@ -58,7 +58,7 @@ PathTrackerNode::PathTrackerNode() : tf2_listener_(tf2_buffer_)
   this->robot_frame_ = "base_link";
   this->world_frame_ = "world";
 
-  _controller = std::make_unique<control::RobotController>(control::ControllerType::PURE_PURSUIT);
+  _controller = std::make_unique<control::RobotController>(control::ControllerType::STANLEY);
 };  
 
 void PathTrackerNode::localPathCallback(const nav_msgs::Path::ConstPtr& path)
