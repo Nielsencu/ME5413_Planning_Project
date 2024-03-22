@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 #include "base_controller.hpp"
+#include "utils.hpp"
 
 namespace control{
     class DWAController : public BaseController{
@@ -19,7 +20,7 @@ namespace control{
             double lin_vel_res = 0.01;
             double ang_vel_res = 0.02;
             double speed_cost_gain = 1.0; 
-            double angle2goal_cost_gain = 0.5;
+            double angle2goal_cost_gain = 0.15;
             double dist2goal_cost_gain = 0.5;
         };
 
@@ -140,7 +141,7 @@ namespace control{
             double dx{goal.x - traj_end.x};
             double dy{goal.y - traj_end.y};
             const auto error_angle{std::atan2(dy, dx)};
-            const auto cost_angle{error_angle - robot_yaw};
+            const auto cost_angle{normalizeHeadingError(error_angle - robot_yaw)};
             return std::abs(std::atan2(std::sin(cost_angle), std::cos(cost_angle)));
         }
 
