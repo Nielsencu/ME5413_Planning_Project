@@ -119,6 +119,11 @@ class PIDController : public BaseController{
       }
       return _pidYaw.calculate(heading_error);
     }
+
+    CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+      return {getLinX(odom_robot, pose_goal), getAngZ(odom_robot, pose_goal)};
+    }
+    
   private:
     Params _params;
     PID _pid;

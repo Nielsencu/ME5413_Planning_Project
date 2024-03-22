@@ -18,6 +18,7 @@ double SPEED_TARGET;
 double PID_Kp, PID_Ki, PID_Kd;
 double PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw;
 double STANLEY_K;
+double pure_pursuit_kp;
 bool PARAMS_UPDATED;
 
 double lookahead_dist;
@@ -38,12 +39,12 @@ void dynamicParamCallback(const me5413_world::path_trackerConfig& config, uint32
   PID_Kd_yaw = config.PID_Kd_yaw;
   // Stanley
   STANLEY_K = config.stanley_K;
+  pure_pursuit_kp = config.pure_pursuit_kp;
 
   PARAMS_UPDATED = true;
 }
 
-PathTrackerNode::PathTrackerNode() : tf2_listener_(tf2_buffer_),
-_controller(control::LinearController::PID, control::AngularController::PURE_PURSUIT)
+PathTrackerNode::PathTrackerNode() : tf2_listener_(tf2_buffer_)
 {
   f = boost::bind(&dynamicParamCallback, _1, _2);
   server.setCallback(f);
@@ -56,7 +57,9 @@ _controller(control::LinearController::PID, control::AngularController::PURE_PUR
   // Initialization
   this->robot_frame_ = "base_link";
   this->world_frame_ = "world";
-};
+
+  _controller = std::make_unique<control::RobotController>(control::ControllerType::PURE_PURSUIT);
+};  
 
 void PathTrackerNode::localPathCallback(const nav_msgs::Path::ConstPtr& path)
 {
@@ -91,19 +94,15 @@ geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odom
   geometry_msgs::Twist cmd_vel;
   if (PARAMS_UPDATED)
   {
-    if(_controller._angularControllerType == control::AngularController::PID ||
-      _controller._linearControllerType == control::LinearController::PID){
-      const auto pidController = _controller.getPIDController();
-      pidController->updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
-    }
+    _controller->updateParams(control::PIDController::Params{PID_Kp, PID_Ki, PID_Kd, PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw, SPEED_TARGET});
+    _controller->updateParams(control::StanleyController::Params{STANLEY_K});
+    _controller->updateParams(control::PurePursuitController::Params{lookahead_dist, pure_pursuit_kp});
     PARAMS_UPDATED = false;
   }
   
-  const auto [linX, angZ] = _controller.getLinXAngZ(odom_robot, pose_goal);
-  cmd_vel.linear.x = linX;
-  cmd_vel.angular.z = angZ;
-  cmd_vel.angular.z = std::min(std::max(cmd_vel.angular.z, -2.2), 2.2);
-  
+  const auto cmd = _controller->getCmdVel(odom_robot, pose_goal);
+  cmd_vel.linear.x = cmd.lin_x;
+  cmd_vel.angular.z = std::min(std::max(cmd.ang_z, -2.2), 2.2);
   std::cout << "cmd vel lin x " << cmd_vel.linear.x << " cmd vel ang z " << cmd_vel.angular.z << "\n";
   return cmd_vel;
 }

@@ -20,19 +20,11 @@ namespace control{
             double lin_vel_res = 0.01;
             double ang_vel_res = 0.02;
             double speed_cost_gain = 1.0; 
-            double angle2goal_cost_gain = 0.15;
+            double angle2goal_cost_gain = 0.5;
             double dist2goal_cost_gain = 0.5;
         };
 
-        double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-            return 0.0;
-        }
-
-        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-            return 0.0;
-        }
-
-        std::array<double,2> getControl(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
             tf2::Quaternion q_robot;
             tf2::fromMsg(odom_robot.pose.pose.orientation, q_robot);
             const tf2::Matrix3x3 m_robot = tf2::Matrix3x3(q_robot);

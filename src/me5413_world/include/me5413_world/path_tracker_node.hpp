@@ -76,7 +76,7 @@ class PathTrackerNode
   geometry_msgs::Pose pose_world_goal_;
 
   // Controllers
-  control::RobotController _controller;
+  std::unique_ptr<control::RobotController> _controller;
 };
 
 } // namespace me5413_world

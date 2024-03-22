@@ -4,17 +4,24 @@
 #include <nav_msgs/Path.h>
 #include "utils.hpp"
 #include "base_controller.hpp"
+#include "pid.hpp"
 
 namespace control{
 
     class StanleyController : public BaseController{
         public:
-        struct StanleyParams{
+        struct Params{
             double stanley_k = 0.5;
         };
 
+        PIDController* getPIDController(){return &_pid;};
+
+        void updateParams(Params&& paramsIn){
+            _params = std::move(paramsIn);
+        };
+
         double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-            return 0.0;
+            return _pid.getLinX(odom_robot, pose_goal);
         }
 
         double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
@@ -46,27 +53,36 @@ namespace control{
             return stanley_output;
         }
 
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+            return {getLinX(odom_robot, pose_goal), getAngZ(odom_robot, pose_goal)};
+        }
+
         private:
-            StanleyParams _params;
+            Params _params;
+            PIDController _pid;
     };
 
     class PurePursuitController : public BaseController{
     public:
-        struct PurePursuitParams{
+        struct Params{
             double lookahead_dist = 1.0;
-            double vehicle_length = 0.5;
             double kp = 1.0;
-            double stanley_k = 0.5;
+        };
+
+        PIDController* getPIDController(){return &_pid;};
+
+        void updateParams(Params&& paramsIn){
+            _params = std::move(paramsIn);
         };
 
         double getLinX(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-            return 0.0;
+            return _pid.getLinX(odom_robot, pose_goal);
         }
 
         double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
             const auto heading_error = getHeadingError(odom_robot, pose_goal);
             const auto velocity = getVelFromOdom(odom_robot);
-            return std::atan2(2 * _params.vehicle_length * std::sin(heading_error),   (_params.kp * velocity));
+            return std::atan2(2 * VEHICLE_LENGTH * std::sin(heading_error),   (_params.kp * velocity));
         }
 
         static int getTargetPoint(const tf2::Vector3& pos, const nav_msgs::Path::ConstPtr& path, double lookahead_dist){
@@ -81,8 +97,14 @@ namespace control{
             }
             return target_idx;
         }
+
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+            return {getLinX(odom_robot, pose_goal), getAngZ(odom_robot, pose_goal)};
+        }
         
     private:
-        PurePursuitParams _params;
+        Params _params;
+        PIDController _pid;
+        static constexpr double VEHICLE_LENGTH = 0.5;
     };
 }
