@@ -36,7 +36,7 @@ namespace control{
     };
     
     void RobotController::updateParams(control::PIDController::Params&& paramsIn){
-        PIDController* pidController;
+        PIDController* pidController = nullptr;
         if(_controllerType == ControllerType::PURE_PURSUIT){
             const auto controller = dynamic_cast<PurePursuitController*>(_controller.get());
             pidController = controller->getPIDController();

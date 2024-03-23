@@ -19,6 +19,7 @@ double PID_Kp, PID_Ki, PID_Kd;
 double PID_Kp_yaw, PID_Ki_yaw, PID_Kd_yaw;
 double STANLEY_K;
 double pure_pursuit_kp;
+int controller_id;
 bool PARAMS_UPDATED;
 
 double lookahead_dist;
@@ -41,6 +42,8 @@ void dynamicParamCallback(const me5413_world::path_trackerConfig& config, uint32
   STANLEY_K = config.stanley_K;
   pure_pursuit_kp = config.pure_pursuit_kp;
 
+  controller_id = config.controller_id;
+
   PARAMS_UPDATED = true;
 }
 
@@ -58,7 +61,9 @@ PathTrackerNode::PathTrackerNode() : tf2_listener_(tf2_buffer_)
   this->robot_frame_ = "base_link";
   this->world_frame_ = "world";
 
-  _controller = std::make_unique<control::RobotController>(control::ControllerType::STANLEY);
+  const auto controllerType = _controllerMap.at(controller_id);
+  _controller = std::make_unique<control::RobotController>(controllerType);
+  std::cout << "Using controller " << static_cast<int>(controllerType) << "\n";
 };  
 
 void PathTrackerNode::localPathCallback(const nav_msgs::Path::ConstPtr& path)
@@ -99,7 +104,6 @@ geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odom
     _controller->updateParams(control::PurePursuitController::Params{lookahead_dist, pure_pursuit_kp});
     PARAMS_UPDATED = false;
   }
-  
   const auto cmd = _controller->getCmdVel(odom_robot, pose_goal);
   cmd_vel.linear.x = cmd.lin_x;
   cmd_vel.angular.z = std::min(std::max(cmd.ang_z, -2.2), 2.2);

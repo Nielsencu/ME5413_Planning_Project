@@ -13,6 +13,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <array>
 
 #include <ros/ros.h>
 #include <ros/console.h>
@@ -77,8 +79,11 @@ class PathTrackerNode
 
   // Controllers
   std::unique_ptr<control::RobotController> _controller;
+  std::unordered_map<int, control::ControllerType> _controllerMap{
+    {0, control::ControllerType::PID}, {1, control::ControllerType::PURE_PURSUIT},
+    {2, control::ControllerType::STANLEY}, {3, control::ControllerType::DWA}
+  };
 };
-
 } // namespace me5413_world
 
 #endif // PATH_TRACKER_NODE_H_
