@@ -19,10 +19,10 @@ namespace control{
             double max_ang_acc = 110.0 * M_PI / 180.0; 
             double lin_vel_res = 0.02;
             double ang_vel_res = 1.0 * M_PI / 180.0;
-            double speed_cost_gain = 3.0; 
-            double angle2goal_cost_gain = 0.15;
-            double dist2goal_cost_gain = 0.2;
-            double path_cost_gain = 0.3;
+            double speed_cost_gain = 1.0; 
+            double angle2goal_cost_gain = 0.0;
+            double dist2goal_cost_gain = 0.15;
+            double path_cost_gain = 0.0;
         };
 
         CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){
@@ -48,6 +48,8 @@ namespace control{
 
     private:
         DWAParams _params;
+        static constexpr double ROBOT_STUCK_FLAG = 0.001;
+
         struct Velocity{
             double lin_x;
             double ang_z;
@@ -171,6 +173,9 @@ namespace control{
                     if(cost < min_cost){
                         min_cost = cost;
                         velOut = vel;
+                        if(std::abs(velOut.lin_x) < ROBOT_STUCK_FLAG && std::abs(x.yaw) < ROBOT_STUCK_FLAG){
+                            velOut.ang_z = _params.max_ang_vel;
+                        }
                     }
                 }
             }

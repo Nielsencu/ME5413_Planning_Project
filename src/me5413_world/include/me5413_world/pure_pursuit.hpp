@@ -87,15 +87,30 @@ namespace control{
 
         static int getTargetPoint(const tf2::Vector3& pos, const nav_msgs::Path::ConstPtr& path, double lookahead_dist){
             tf2::Vector3 targetPt;
-            int target_idx = 11;
+            int target_idx = getClosestWaypoint(pos, path);
             tf2::fromMsg(path->poses[target_idx].pose.position, targetPt);
             auto curr_dist = getDistance(pos, targetPt);
-            while(curr_dist < lookahead_dist and target_idx < path->poses.size() - 1){
+            while(curr_dist < lookahead_dist and target_idx < path->poses.size()-1){
                 target_idx++;
                 tf2::fromMsg(path->poses[target_idx].pose.position, targetPt);
                 curr_dist = getDistance(pos, targetPt);
             }
             return target_idx;
+        }
+
+        static int getClosestWaypoint(const tf2::Vector3& pos, const nav_msgs::Path::ConstPtr& path){
+            double min_dist = DBL_MAX;
+            int id_closest = 0;
+            for (int i = 0; i < path->poses.size(); i++){
+                const double dist = std::hypot(pos.getX() - path->poses[i].pose.position.x, pos.getY() - path->poses[i].pose.position.y);
+                if (dist <= min_dist){
+                    min_dist = dist;
+                    id_closest = i;
+                }else{
+                    break;
+                }
+            }
+            return id_closest;
         }
 
         CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){

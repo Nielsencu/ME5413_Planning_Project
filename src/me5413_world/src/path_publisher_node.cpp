@@ -21,6 +21,7 @@ double TRACK_WP_NUM;
 double LOCAL_PREV_WP_NUM;
 double LOCAL_NEXT_WP_NUM;
 bool PARAMS_UPDATED = false;
+bool GOAL_REACHED = false;
 
 void dynamicParamCallback(const me5413_world::path_publisherConfig& config, uint32_t level)
 {
@@ -72,6 +73,10 @@ PathPublisherNode::PathPublisherNode() : tf2_listener_(tf2_buffer_)
 
 void PathPublisherNode::timerCallback(const ros::TimerEvent &)
 {
+  if(GOAL_REACHED){
+    ROS_WARN("Robot has reached the end of the track, please restart");
+    return;
+  }
   // Create and Publish Paths
   if (PARAMS_UPDATED)
   {
@@ -105,6 +110,10 @@ void PathPublisherNode::timerCallback(const ros::TimerEvent &)
   this->pub_rms_position_error_.publish(this->rms_position_error_);
   this->pub_rms_heading_error_.publish(this->rms_heading_error_);
   this->pub_rms_speed_error_.publish(this->rms_speed_error_);
+
+  ROS_INFO("RMSE Pos: %f", this->rms_position_error_.data);
+  ROS_INFO("RMSE Heading: %f", this->rms_heading_error_.data);
+  ROS_INFO("RMSE Speed: %f", this->rms_speed_error_.data);
 
   // Count
   this->num_time_steps_++;
@@ -173,6 +182,10 @@ void PathPublisherNode::publishGlobalPath()
 
 void PathPublisherNode::publishLocalPath(const geometry_msgs::Pose &robot_pose, const int n_wp_prev, const int n_wp_post)
 {
+  if(GOAL_REACHED){
+    ROS_WARN("Robot has reached the end of the track, please restart");
+    return;
+  }
   int id_next = nextWaypoint(robot_pose, this->global_path_msg_, this->current_id_);
   if (this->global_path_msg_.poses.empty())
   {
@@ -180,7 +193,12 @@ void PathPublisherNode::publishLocalPath(const geometry_msgs::Pose &robot_pose, 
   }
   else if (id_next >= this->global_path_msg_.poses.size() - 1)
   {
-    ROS_WARN("Robot has reached the end of the track, please restart");
+    ROS_WARN("Robot has reached the end of the track, shutting down node...");
+    GOAL_REACHED = true;
+    ROS_INFO("Final RMSE Pos: %f", this->rms_position_error_.data);
+    ROS_INFO("Final RMSE Heading: %f", this->rms_heading_error_.data);
+    ROS_INFO("Final RMSE Speed: %f", this->rms_speed_error_.data);
+    ros::shutdown();
   }
   else
   {
