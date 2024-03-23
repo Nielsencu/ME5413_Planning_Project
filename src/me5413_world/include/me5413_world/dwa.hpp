@@ -11,20 +11,21 @@ namespace control{
         DWAController() = default;
         struct DWAParams{
             double dt = 0.1;
-            double pred_time = 1.0; 
+            double pred_time = 1.5; 
             double max_lin_vel = 0.5; 
             double min_lin_vel = 0.0;
-            double max_ang_vel = 3.14;
-            double max_lin_acc = 0.5;
-            double max_ang_acc = 0.7; 
-            double lin_vel_res = 0.01;
-            double ang_vel_res = 0.02;
-            double speed_cost_gain = 1.0; 
-            double angle2goal_cost_gain = 0.5;
-            double dist2goal_cost_gain = 0.5;
+            double max_ang_vel = 60.0 * M_PI / 180.0;
+            double max_lin_acc = 5.0;
+            double max_ang_acc = 110.0 * M_PI / 180.0; 
+            double lin_vel_res = 0.1;
+            double ang_vel_res = 1.0 * M_PI / 180.0;
+            double speed_cost_gain = 3.0; 
+            double angle2goal_cost_gain = 0.15;
+            double dist2goal_cost_gain = 0.2;
+            double path_cost_gain = 0.1;
         };
 
-        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){
             tf2::Quaternion q_robot;
             tf2::fromMsg(odom_robot.pose.pose.orientation, q_robot);
             const tf2::Matrix3x3 m_robot = tf2::Matrix3x3(q_robot);
@@ -41,7 +42,7 @@ namespace control{
 
             Velocity cmd_vel;
             const auto dw = _getDynamicWindow(x_init);
-            _getDWAPlan(x_init, dw , goal, cmd_vel);
+            _getDWAPlan(x_init, dw , goal, cmd_vel, path);
             return {cmd_vel.lin_x, cmd_vel.ang_z};
         }
 
@@ -89,12 +90,6 @@ namespace control{
                 nPossibleW = 0;
             }
 
-            std::cout << "nPossibleV " << nPossibleV << "\n";
-            std::cout << "nPossibleW " << nPossibleW << "\n";
-
-            std::cout << "maxV " << maxV << " minV " << minV << "\n";
-            std::cout << "maxW " << maxW << " minW " << minW << "\n";
-
             std::vector<double> possibleV;
             std::vector<double> possibleW;
 
@@ -105,7 +100,6 @@ namespace control{
             for(size_t i=0; i < nPossibleW; i++) {
                 possibleW.push_back(minW + static_cast<double>(i) * _params.ang_vel_res);
             }
-
             return {minV, maxV, minW, maxW, possibleV, possibleW};
         }
 
@@ -148,7 +142,15 @@ namespace control{
             return _params.max_lin_vel - vel.lin_x;
         }
 
-        void _getDWAPlan(const State& x, const DynamicWindow& dw, const Point& goal, Velocity& velOut){
+        double _getPathCost(const Point& point, const Point& edge_point1, const Point& edge_point2){
+            const double a = edge_point2.y - edge_point1.y;
+            const double b = -(edge_point2.x - edge_point1.x);
+            const double c = -a * edge_point1.x - b * edge_point1.y;
+
+            return std::abs(a * point.x + b * point.y + c) / (hypot(a, b) + DBL_EPSILON);
+        }
+
+        void _getDWAPlan(const State& x, const DynamicWindow& dw, const Point& goal, Velocity& velOut, const nav_msgs::Path::ConstPtr& path){
             double min_cost{10000};
             State x_init = x;
             double cost;
@@ -163,10 +165,13 @@ namespace control{
                     //   ROS_INFO("%f, %f", point.x, point.y);
                     // }
                     // ROS_INFO("------------------------------");
-                    ROS_INFO("%f %f %f", _getDist2GoalCost(temp_traj, goal), _getAngle2GoalCost(temp_traj, goal, x_init.yaw), _getVelocityCost(vel));
+                    const auto path_first_point = Point{path->poses[11].pose.position.x, path->poses[11].pose.position.y};
+                    const auto path_last_point = Point{path->poses.back().pose.position.x, path->poses.back().pose.position.y};
+                    ROS_INFO("%f %f %f", _getDist2GoalCost(temp_traj, goal), _getAngle2GoalCost(temp_traj, goal, x_init.yaw), _getVelocityCost(vel), _getPathCost(temp_traj.back(), path_first_point, path_last_point));
                     cost = _params.dist2goal_cost_gain * _getDist2GoalCost(temp_traj, goal) \
                             + _params.angle2goal_cost_gain * _getAngle2GoalCost(temp_traj, goal, x_init.yaw) \
-                            + _params.speed_cost_gain * _getVelocityCost(vel);
+                            + _params.speed_cost_gain * _getVelocityCost(vel)
+                            + _params.path_cost_gain * _getPathCost(temp_traj.back(), path_first_point, path_last_point);
 
                     if(cost < min_cost){
                         min_cost = cost;

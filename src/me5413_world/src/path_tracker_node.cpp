@@ -75,7 +75,7 @@ void PathTrackerNode::localPathCallback(const nav_msgs::Path::ConstPtr& path)
   const auto targetPt = control::PurePursuitController::getTargetPoint(pos_robot, path, lookahead_dist);
   std::cout << "Target pt is " << targetPt << "\n";
   this->pose_world_goal_ = path->poses[targetPt].pose;
-  this->pub_cmd_vel_.publish(computeControlOutputs(this->odom_world_robot_, this->pose_world_goal_));
+  this->pub_cmd_vel_.publish(computeControlOutputs(this->odom_world_robot_, this->pose_world_goal_, path));
 
   geometry_msgs::PoseStamped pose_stamped_goal;
   pose_stamped_goal.pose = this->pose_world_goal_;
@@ -94,7 +94,7 @@ void PathTrackerNode::robotOdomCallback(const nav_msgs::Odometry::ConstPtr& odom
   return;
 };
 
-geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal)
+geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path)
 {
   geometry_msgs::Twist cmd_vel;
   if (PARAMS_UPDATED)
@@ -104,7 +104,7 @@ geometry_msgs::Twist PathTrackerNode::computeControlOutputs(const nav_msgs::Odom
     _controller->updateParams(control::PurePursuitController::Params{lookahead_dist, pure_pursuit_kp});
     PARAMS_UPDATED = false;
   }
-  const auto cmd = _controller->getCmdVel(odom_robot, pose_goal);
+  const auto cmd = _controller->getCmdVel(odom_robot, pose_goal, path);
   cmd_vel.linear.x = cmd.lin_x;
   cmd_vel.angular.z = std::min(std::max(cmd.ang_z, -2.2), 2.2);
   std::cout << "cmd vel lin x " << cmd_vel.linear.x << " cmd vel ang z " << cmd_vel.angular.z << "\n";

@@ -24,7 +24,7 @@ namespace control{
             return _pid.getLinX(odom_robot, pose_goal);
         }
 
-        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal) const{
             // Heading Error
             tf2::Quaternion q_robot, q_goal;
             tf2::fromMsg(odom_robot.pose.pose.orientation, q_robot);
@@ -53,7 +53,7 @@ namespace control{
             return stanley_output;
         }
 
-        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){
             return {getLinX(odom_robot, pose_goal), getAngZ(odom_robot, pose_goal)};
         }
 
@@ -79,7 +79,7 @@ namespace control{
             return _pid.getLinX(odom_robot, pose_goal);
         }
 
-        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+        double getAngZ(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal) const{
             const auto heading_error = getHeadingError(odom_robot, pose_goal);
             const auto velocity = getVelFromOdom(odom_robot);
             return std::atan2(2 * VEHICLE_LENGTH * std::sin(heading_error),   (_params.kp * velocity));
@@ -98,7 +98,7 @@ namespace control{
             return target_idx;
         }
 
-        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){
             return {getLinX(odom_robot, pose_goal), getAngZ(odom_robot, pose_goal)};
         }
         

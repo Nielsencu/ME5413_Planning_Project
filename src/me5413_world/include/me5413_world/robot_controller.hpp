@@ -13,11 +13,11 @@ namespace control{
     public:
         RobotController(ControllerType controllerTypeIn);
         ControllerType _controllerType;
-        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal);
+        CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path);
         std::shared_ptr<BaseController> getController(){return _controller;};
-        void updateParams(control::PIDController::Params&& paramsIn);
-        void updateParams(control::PurePursuitController::Params&& paramsIn);
-        void updateParams(control::StanleyController::Params&& paramsIn);
+        void updateParams(control::PIDController::Params&& paramsIn) const;
+        void updateParams(control::PurePursuitController::Params&& paramsIn) const;
+        void updateParams(control::StanleyController::Params&& paramsIn) const;
     private:
         std::shared_ptr<BaseController> _controller;
     };
@@ -35,7 +35,7 @@ namespace control{
         }
     };
     
-    void RobotController::updateParams(control::PIDController::Params&& paramsIn){
+    void RobotController::updateParams(control::PIDController::Params&& paramsIn) const{
         PIDController* pidController = nullptr;
         if(_controllerType == ControllerType::PURE_PURSUIT){
             const auto controller = dynamic_cast<PurePursuitController*>(_controller.get());
@@ -51,21 +51,21 @@ namespace control{
         }
     }
 
-    void RobotController::updateParams(control::PurePursuitController::Params&& paramsIn){
+    void RobotController::updateParams(control::PurePursuitController::Params&& paramsIn) const{
         const auto controller = dynamic_cast<PurePursuitController*>(_controller.get());
         if(controller != nullptr){
             controller->updateParams(std::move(paramsIn));
         }
     }
 
-    void RobotController::updateParams(control::StanleyController::Params&& paramsIn){
+    void RobotController::updateParams(control::StanleyController::Params&& paramsIn) const{
         const auto controller = dynamic_cast<StanleyController*>(_controller.get());
         if(controller != nullptr){
             controller->updateParams(std::move(paramsIn));
         }
     }
 
-    CmdVel RobotController::getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal){
-        return _controller->getCmdVel(odom_robot, pose_goal);
+    CmdVel RobotController::getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){
+        return _controller->getCmdVel(odom_robot, pose_goal, path);
     }
 }
