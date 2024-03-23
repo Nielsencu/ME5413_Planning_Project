@@ -17,12 +17,12 @@ namespace control{
             double max_ang_vel = 60.0 * M_PI / 180.0;
             double max_lin_acc = 5.0;
             double max_ang_acc = 110.0 * M_PI / 180.0; 
-            double lin_vel_res = 0.1;
+            double lin_vel_res = 0.02;
             double ang_vel_res = 1.0 * M_PI / 180.0;
             double speed_cost_gain = 3.0; 
             double angle2goal_cost_gain = 0.15;
             double dist2goal_cost_gain = 0.2;
-            double path_cost_gain = 0.1;
+            double path_cost_gain = 0.3;
         };
 
         CmdVel getCmdVel(const nav_msgs::Odometry& odom_robot, const geometry_msgs::Pose& pose_goal, const nav_msgs::Path::ConstPtr& path){
@@ -37,7 +37,7 @@ namespace control{
             tf2::fromMsg(odom_robot.pose.pose.position, point_robot);
             tf2::fromMsg(pose_goal.position, point_goal);
             
-            const State x_init{point_robot.getX(), point_robot.getY(), yaw_robot, odom_robot.twist.twist.linear.x, odom_robot.twist.twist.angular.z};
+            const State x_init{point_robot.getX(), point_robot.getY(), yaw_robot, getVelFromOdom(odom_robot), odom_robot.twist.twist.angular.z};
             const Point goal{point_goal.getX(), point_goal.getY()};
 
             Velocity cmd_vel;
@@ -75,20 +75,14 @@ namespace control{
         };
 
         DynamicWindow _getDynamicWindow(const State& x){
+            std::cout << "Lin x  " << x.vel.lin_x << " ang z " << x.vel.ang_z << "\n";
             double minV = std::max(_params.min_lin_vel, x.vel.lin_x - _params.max_lin_acc * _params.dt);
             double maxV = std::min(_params.max_lin_vel, x.vel.lin_x + _params.max_lin_acc * _params.dt);
             double minW = std::max(-_params.max_ang_vel, x.vel.ang_z - _params.max_ang_acc * _params.dt);
             double maxW = std::min(_params.max_ang_vel, x.vel.ang_z + _params.max_ang_acc * _params.dt);
 
-            size_t nPossibleV = (maxV - minV) / _params.lin_vel_res;
-            size_t nPossibleW = (maxW - minW) / _params.ang_vel_res;
-
-            if(minV > maxV){
-                nPossibleV = 0;
-            }
-            if(minW > maxW){
-                nPossibleW = 0;
-            }
+            size_t nPossibleV = std::max(static_cast<int>(((maxV - minV) / _params.lin_vel_res)+1), 0);
+            size_t nPossibleW = std::max(static_cast<int>(((maxW - minW) / _params.ang_vel_res)+1), 0);
 
             std::vector<double> possibleV;
             std::vector<double> possibleW;
@@ -165,9 +159,10 @@ namespace control{
                     //   ROS_INFO("%f, %f", point.x, point.y);
                     // }
                     // ROS_INFO("------------------------------");
+                    // ROS_INFO("%f %f vel", vel.lin_x, vel.ang_z);
                     const auto path_first_point = Point{path->poses[11].pose.position.x, path->poses[11].pose.position.y};
                     const auto path_last_point = Point{path->poses.back().pose.position.x, path->poses.back().pose.position.y};
-                    ROS_INFO("%f %f %f", _getDist2GoalCost(temp_traj, goal), _getAngle2GoalCost(temp_traj, goal, x_init.yaw), _getVelocityCost(vel), _getPathCost(temp_traj.back(), path_first_point, path_last_point));
+                    // ROS_INFO("%f %f %f %f", _getDist2GoalCost(temp_traj, goal), _getAngle2GoalCost(temp_traj, goal, x_init.yaw), _getVelocityCost(vel), _getPathCost(temp_traj.back(), path_first_point, path_last_point));
                     cost = _params.dist2goal_cost_gain * _getDist2GoalCost(temp_traj, goal) \
                             + _params.angle2goal_cost_gain * _getAngle2GoalCost(temp_traj, goal, x_init.yaw) \
                             + _params.speed_cost_gain * _getVelocityCost(vel)
