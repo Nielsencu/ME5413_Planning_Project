@@ -15,7 +15,7 @@ namespace control{
             double max_lin_vel = 0.5; 
             double min_lin_vel = 0.0;
             double max_ang_vel = 60.0 * M_PI / 180.0;
-            double max_lin_acc = 5.0;
+            double max_lin_acc = 1.0;
             double max_ang_acc = 110.0 * M_PI / 180.0; 
             double lin_vel_res = 0.02;
             double ang_vel_res = 1.0 * M_PI / 180.0;
